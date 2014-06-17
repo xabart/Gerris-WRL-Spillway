@@ -1,0 +1,209 @@
+#
+#  2D finite flume from WRL
+#########################################################################################################
+##########################################################################################################
+# Remember : Gerris solves Fluid Mechanics Incompressible Navier-Stokes
+##########################################################################################################
+# \div.u = 0
+#
+#      d u
+# \rho ----- =  - \grad p + \div(\mu(\grad u + \grad u^T)) + \sigma \kappa ( \delta_s n)   + \rho f
+#      d t
+#
+# equations are written in the following form
+#
+#\div U = 0
+#
+#  d U
+# ----- = alpha ( -\grad P + (SourceViscosity (\grad U+\grad U^T)) + GfsSourceTension GfsVariableCurvature ( \delta_s n)) + Source(U)
+#  d t
+#
+# parameters are indeed :
+# 1/\rho        alpha                   elementary volume          http://gfs.sourceforge.net/wiki/index.php/GfsPhysicalParams
+# \mu           SourceViscosity dynamic viscosity                  http://gfs.sourceforge.net/wiki/index.php/GfsSourceViscosity
+# \sigma        GfsSourceTension        surface tension            http://gfs.sourceforge.net/wiki/index.php/GfsSourceTension
+# \kappa        GfsVariableCurvature    courbure                   http://gfs.sourceforge.net/wiki/index.php/GfsVariableCurvature
+# f             Source                  supplementary acceleration http://gfs.sourceforge.net/wiki/index.php/GfsSource
+#
+#
+# Of course, Gerris is dimensionless. Dimensionless variables:
+# u = U_0 u, v = U_0 v,  x = L x,  y = L y,  t = L/U_0 t,     p = \rho U_0^2 p
+# \rho = \rho_0 \bar{\rho}, \mu = \mu_0 \bar{\mu},  \sigma = \sigma_0 \bar{\sigma}
+#
+# which gives, taking care of the fact that \div n = \kappa , la courbure \kappa = \bar{\kappa} /L,
+# and \delta_s = \bar{delta_s} L
+#
+#  \div \bar{U} = 0
+#
+#             d u                         1                                           1
+#  \bar{rho} ----- =  - \grad \bar{p} + (---) \div(\bar{\mu}(\grad u + \grad u^T)) + --- \bar{\kappa} ( \bar{\delta_s} n)
+#             d t                         Re                                          We
+#
+# with the following non dimension numbers Re = \rho_0 U_0 L/\mu_0  et  We = \rho_0 U_0^2 L/\sigma_0
+#
+#
+#########################################################################################################
+##########################################################################################################
+
+#########################################################################################################
+##########################################################################################################
+# in our case
+##################################################
+#
+#  Qw =                          input flow
+#  Width
+#  Dc = 1                        critical depth 
+#  g = 2 pi                      gravity
+#  Time = 1                         period
+#  omega = 2*pi/T = 2*pi
+#  U0 = (g/omega)=1
+#  pho_w = 1000                  water density
+#  pho_a = 1.225                 air density
+#  mu_w = 1.002 e-3              water viscosity
+#  mu_a = 1.79 e-5               air viscosity
+#  sigma_0 = 7.286 e-2           specific surface tension water/air (N/m)
+#  Re = 1000*1*1/mu_w= 998004    Reynolds number (water)
+#  We = 1000/7.286 e-2 =  13725  Weber number(water)
+#  H0 water depth
+#
+##################################################
+
+
+1 0 GfsSimulation GfsBox GfsGEdge {
+##############################################################
+  # shift origin of the domain
+   x = 0.5 y = 0.5 } {
+###############################################################
+  Global {
+    double Qw = 1 ;
+    double Width = 1 ;
+    double g = 9.81;
+    double Time = 1;
+    double pho_w = 1000;
+    double pho_a = 1.225 ;
+    double mu_w = 1.002E-3 ;
+    double mu_a = 1.79E-5  ;
+    double sigma_0 = 7.286E-2 ;
+    double Hspillway = 0.5 ;
+    double ThetaSpillway = 0.5 ;
+    #define Dc         (power((power(Qw,2)/(g*(power(Width,2))),1./3.))
+    #define U0         (sqrt(g*Dc))
+    #define Re_w       (pho_w*U0*Dc/mu_w)
+    #define We_w       (pho_w*U0*U0/sigma_0)
+    #define ratio_rho  (pho_a /pho_w)
+    #define ratio_mu   (mu_a/mu_w)
+
+//###############################################################
+//##   2 fluid phases
+//###############################################################
+    // The CLAMP function has the mission to keep values of the tracer within 0 and 1.
+    // You can use dtmax = 1e-2 to decrease time steps.
+    #define VAR(T,min,max) (min + CLAMP(T,0,1)*(max - min))
+    #define RHO(T)               VAR(T,ratio_rho,1.)
+    #define MU(T)                VAR(T,ratio_mu,1.)
+
+//###############################################################
+  }
+###############################################################
+# http://gfs.sourceforge.net/wiki/index.php/Hypre
+#  GModule hypre {
+#  solver_type      = boomer_amg
+#  precond_type     = none
+#  relax_type       = gs-j
+#  coarsening_type  = cgc_e
+#  cycle_type       = 1
+#  nlevel           = 0
+#  verbose          = 0
+# }
+##########################################
+  # Grid Resolution
+  Refine 6
+
+  # Time
+  Time { end = 0. }
+
+  # Tolerance for poisson
+  ProjectionParams { tolerance = 1.e-6 nitermax = 10000}
+  ApproxProjectionParams { tolerance = 1.e-6 nitermax = 10000}
+
+
+  # parameters of various advection schemes
+  GfsAdvectionParams {
+  cfl = 0.5
+  }
+  # Variable for the interface (VOF)
+  VariableTracerVOFHeight T
+
+  # In case of high density ratio
+  VariableFiltered T1 T 1
+
+  # Curvature of the interface
+  #VariableCurvature K T
+
+  # Coefficient for surface tension = 1/We^2
+#  SourceTension T {1./(We*We)} K
+
+  # Init of the velocity field
+   Init { } {
+	U=0.
+	V=0.
+    }
+
+  # Init of free surface
+  InitFraction {}  T ( (y-H0) )
+
+
+  # Density
+  #air/water density ratio si T1=0 ratio_rho si T1=1 1
+  PhysicalParams { alpha = 1./RHO(T1) }
+
+  # Viscosity
+ # SourceViscosity (1./Re)*MU(T1)
+
+  # Gravity
+  Source {} V (-g)
+  Source {} U (0.)
+
+  # AMR
+  # AdaptVorticity { istep = 1 } { maxlevel = 9 cmax = 1e-2 }
+  # AdaptGradient { istep = 1 } { maxlevel = 5 cmax = 1e-2 } T
+  # AdaptGradient { istep = 1 } { cmax = 0.0 maxlevel = LEVEL1 } (U*T)
+
+  #SolidMoving { istep = 1 } (Class3Paddle(y,0., t,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength),y) { } { level = 5 }
+  Solid (x*x + y*y - 0.25*0.25)
+
+  #RemoveDroplets { istep = 1 } T -2
+
+  # Balance the number of elements across parallel subdomains at every
+  # timestep if the imbalance is larger than 0.1 (i.e. 10% difference
+  # between the largest and smallest subdomains).
+  # EventBalance { istep = 1 } 0.1
+
+  # Writes the time and timestep every 10 timesteps on standard error
+#  OutputTime { istep = 10 } stderr
+
+  # Writes the time and simulation balance every timestep in 'balance'
+#  OutputTime { istep = 1 } balance
+#  OutputBalance { istep = 1 } balance
+   
+#   GfsOutputSimulation { step = 1 } stdout
+  GfsOutputTime            { istep = 1 } stdout
+  GfsOutputProjectionStats { istep = 1 } stdout
+  GfsOutputPPM             { step = 0.1 } test.ppm {
+    v = T1 
+    min = 0
+    max =  1.
+  }
+}
+GfsBox{
+#  Slip BC
+  top = Boundary {
+  }
+#  Slip BC
+  bottom = Boundary {
+  }
+  left = Boundary {
+  }
+  right = Boundary {
+  }
+}
