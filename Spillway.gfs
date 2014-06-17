@@ -74,7 +74,7 @@
    x = 0.5 y = 0.5 } {
 ###############################################################
   Global {
-    double Qw = 1 ;
+    double Qw = 0.1 ;
     double Width = 1 ;
     double g = 9.81;
     double Time = 1;
@@ -157,7 +157,7 @@
   Refine 6
 
   # Time
-  Time { end = 0.3 }
+  Time { end = 2.3 }
 
   # Tolerance for poisson
   ProjectionParams { tolerance = 1.e-6 nitermax = 10000}
@@ -187,7 +187,8 @@
     }
 
   # Init of free surface
-  InitFraction {}  T ( (y-Hspillway) )
+#  InitFraction {}  T ( (y-Hspillway) )
+  InitFraction {}  T ( 1.)
 
 
   # Density
@@ -226,7 +227,7 @@
 #   GfsOutputSimulation { step = 1 } stdout
   GfsOutputTime            { istep = 1 } stdout
   GfsOutputProjectionStats { istep = 1 } stdout
-  GfsOutputPPM             { step = 0.1 } test.ppm {
+  GfsOutputPPM             { step = 0.05 } test.ppm {
     v = T1 
     min = 0
     max =  1.
