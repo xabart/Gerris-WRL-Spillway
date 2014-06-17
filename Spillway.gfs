@@ -64,7 +64,6 @@
 #  sigma_0 = 7.286 e-2           specific surface tension water/air (N/m)
 #  Re = 1000*1*1/mu_w= 998004    Reynolds number (water)
 #  We = 1000/7.286 e-2 =  13725  Weber number(water)
-#  H0 water depth
 #
 ##################################################
 
@@ -85,13 +84,18 @@
     double mu_a = 1.79E-5  ;
     double sigma_0 = 7.286E-2 ;
     double Hspillway = 0.5 ;
-    double ThetaSpillway = 0.5 ;
-    #define Dc         (power((power(Qw,2)/(g*(power(Width,2))),1./3.))
+    double ThetaSpillwayDegree = 60 ;
+    double XStartSpillway = 0.2 ;
+    #define Qw2        (Qw*Qw)
+    #define Width2     (Width*Width)
+    #define Dc         (cbrt((Qw2/(g*Width2))))
     #define U0         (sqrt(g*Dc))
     #define Re_w       (pho_w*U0*Dc/mu_w)
     #define We_w       (pho_w*U0*U0/sigma_0)
     #define ratio_rho  (pho_a /pho_w)
     #define ratio_mu   (mu_a/mu_w)
+    #define ThetaSpillway   (ThetaSpillwayDegree*M_PI/180.)
+    #define LengthSpillway  (Hspillway/tan(ThetaSpillway))
 
 //###############################################################
 //##   2 fluid phases
@@ -102,6 +106,39 @@
     #define RHO(T)               VAR(T,ratio_rho,1.)
     #define MU(T)                VAR(T,ratio_mu,1.)
 
+//###############################################################
+    // Spillway shape
+//###############################################################
+     double Spillway(double x,double y, double Xstart,double height,double Theta){
+        if (x<=Xstart){
+          double ysolid= y -height ;
+          return ysolid;
+        }
+        else {
+          double ysolid= y -height+ tan(Theta)*(x-Xstart) ;
+          return ysolid;
+        }
+     }
+//###############################################################
+    // Spillway inflow
+//###############################################################
+     double SpillwayInflowU(double y, double Hspillway,double Qw,double DDc){
+        if ((y>Hspillway)&(y<DDc+Hspillway)){
+          return (Qw/DDc);
+        }
+        else{
+          return 0.;
+        }
+     }
+     double SpillwayInflowT(double y, double Hspillway,double Qw,double DDc){
+        if ((y>Hspillway)&(y<DDc+Hspillway)){
+          return 0.;
+        }
+        else{
+          return 1.;
+        }
+     }
+     
 //###############################################################
   }
 ###############################################################
@@ -120,7 +157,7 @@
   Refine 6
 
   # Time
-  Time { end = 0. }
+  Time { end = 0.3 }
 
   # Tolerance for poisson
   ProjectionParams { tolerance = 1.e-6 nitermax = 10000}
@@ -141,7 +178,7 @@
   #VariableCurvature K T
 
   # Coefficient for surface tension = 1/We^2
-#  SourceTension T {1./(We*We)} K
+  # SourceTension T {1./(We*We)} K
 
   # Init of the velocity field
    Init { } {
@@ -150,7 +187,7 @@
     }
 
   # Init of free surface
-  InitFraction {}  T ( (y-H0) )
+  InitFraction {}  T ( (y-Hspillway) )
 
 
   # Density
@@ -158,7 +195,7 @@
   PhysicalParams { alpha = 1./RHO(T1) }
 
   # Viscosity
- # SourceViscosity (1./Re)*MU(T1)
+  #SourceViscosity (1./Re)*MU(T1)
 
   # Gravity
   Source {} V (-g)
@@ -168,9 +205,9 @@
   # AdaptVorticity { istep = 1 } { maxlevel = 9 cmax = 1e-2 }
   # AdaptGradient { istep = 1 } { maxlevel = 5 cmax = 1e-2 } T
   # AdaptGradient { istep = 1 } { cmax = 0.0 maxlevel = LEVEL1 } (U*T)
-
-  #SolidMoving { istep = 1 } (Class3Paddle(y,0., t,omega, Pcoeft2,PN,PXconv,PZconv,g,Papp, PTotalLength),y) { } { level = 5 }
-  Solid (x*x + y*y - 0.25*0.25)
+  
+  RefineSolid 5
+  Solid ((x,Spillway(x,y, XStartSpillway,Hspillway,ThetaSpillway)))
 
   #RemoveDroplets { istep = 1 } T -2
 
@@ -196,14 +233,13 @@
   }
 }
 GfsBox{
-#  Slip BC
   top = Boundary {
   }
-#  Slip BC
   bottom = Boundary {
   }
   left = Boundary {
+  BcDirichlet U (SpillwayInflowU(y, Hspillway,Qw,Dc))
+  BcDirichlet T (SpillwayInflowT(y, Hspillway,Qw,Dc))
   }
-  right = Boundary {
-  }
+  right = BoundaryOutflow
 }
