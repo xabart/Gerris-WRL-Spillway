@@ -1,5 +1,5 @@
 #
-#  2D finite flume from WRL
+#  2D Spillway from WRL
 #########################################################################################################
 ##########################################################################################################
 # Remember : Gerris solves Fluid Mechanics Incompressible Navier-Stokes
@@ -66,9 +66,17 @@
 #  We = 1000/7.286 e-2 =  13725  Weber number(water)
 #
 ##################################################
+##################################################
+#  domains
+#
+#       5 | 6 | 7 | 8 |
+#      ----------------
+#       1 | 2 | 3 | 4 |
+#
+##################################################
+##################################################
 
-
-1 0 GfsSimulation GfsBox GfsGEdge {
+8 10 GfsSimulation GfsBox GfsGEdge {
 ##############################################################
   # shift origin of the domain
    x = 0.5 y = 0.5 } {
@@ -166,19 +174,19 @@
 # }
 ##########################################
   # Grid Resolution
-  Refine 6
+  Refine 7
 
   # Time
-  Time { end = 0.1 }
+  Time { end = 0. }
 
   # Tolerance for poisson
-  ProjectionParams { tolerance = 1.e-6 nitermax = 10000}
-  ApproxProjectionParams { tolerance = 1.e-6 nitermax = 10000}
+  ProjectionParams { tolerance = 1.e-6 nitermax = 20000}
+  ApproxProjectionParams { tolerance = 1.e-6 nitermax = 20000}
 
 
   # parameters of various advection schemes
   GfsAdvectionParams {
-  cfl = 0.5
+  cfl = 0.4
   }
   # Variable for the interface (VOF)
   VariableTracerVOFHeight T
@@ -190,7 +198,7 @@
   #VariableCurvature K T
 
   # Coefficient for surface tension = 1/We^2
-  # SourceTension T {1./(We*We)} K
+   SourceTension T {1./(We*We)} K
 
   # Init of the velocity field
    Init { } {
@@ -208,18 +216,18 @@
   PhysicalParams { alpha = 1./RHO(T1) }
 
   # Viscosity
-  #SourceViscosity (1./Re)*MU(T1)
+  SourceViscosity (1./Re)*MU(T1)
 
   # Gravity
   Source {} V (-g)
   Source {} U (0.)
 
   # AMR
-  # AdaptVorticity { istep = 1 } { maxlevel = 9 cmax = 1e-2 }
-  # AdaptGradient { istep = 1 } { maxlevel = 5 cmax = 1e-2 } T
+   AdaptVorticity { istep = 1 } { maxlevel = 10 cmax = 1e-2 }
+   AdaptGradient  { istep = 1 } { maxlevel = 10 cmax = 1e-2 } T
   # AdaptGradient { istep = 1 } { cmax = 0.0 maxlevel = LEVEL1 } (U*T)
   
-  RefineSolid 5
+  RefineSolid 7
   #smooth spillway
   #Solid ((x,Spillway(x,y, XStartSpillway,Hspillway,ThetaSpillway)))
   #step spillway
@@ -230,7 +238,7 @@
   # Balance the number of elements across parallel subdomains at every
   # timestep if the imbalance is larger than 0.1 (i.e. 10% difference
   # between the largest and smallest subdomains).
-  # EventBalance { istep = 1 } 0.1
+    EventBalance { istep = 1 } 0.1
 
   # Writes the time and timestep every 10 timesteps on standard error
 #  OutputTime { istep = 10 } stderr
@@ -239,23 +247,47 @@
 #  OutputTime { istep = 1 } balance
 #  OutputBalance { istep = 1 } balance
    
+  GfsOutputSimulation { istep = 1 } Spillway-AMR-%ld.gfs
+
 #   GfsOutputSimulation { step = 1 } stdout
-  GfsOutputTime            { istep = 1 } stdout
-  GfsOutputProjectionStats { istep = 1 } stdout
-  GfsOutputPPM             { step = 0.05 } test.ppm {
-    v = T1 
-    min = 0
-    max =  1.
-  }
+#  GfsOutputTime            { istep = 1 } stdout
+#  GfsOutputProjectionStats { istep = 1 } stdout
+#  GfsOutputPPM             { step = 0.05 } test.ppm {
+#    v = T1 
+#    min = 0
+#    max =  1.
+#  }
 }
-GfsBox{
-  top = Boundary {
-  }
-  bottom = Boundary {
-  }
+GfsBox{pid=1
   left = Boundary {
   BcDirichlet U (SpillwayInflowU(y, Hspillway,Qw,Dc))
   BcDirichlet T (SpillwayInflowT(y, Hspillway,Qw,Dc))
   }
+}
+GfsBox{pid=5
+  left = Boundary {
+  BcDirichlet U (SpillwayInflowU(y, Hspillway,Qw,Dc))
+  BcDirichlet T (SpillwayInflowT(y, Hspillway,Qw,Dc))
+}
+GfsBox{pid=4
   right = BoundaryOutflow
 }
+GfsBox{pid=8
+  right = BoundaryOutflow
+}
+GfsBox{pid=2}
+GfsBox{pid=3}
+GfsBox{pid=6}
+GfsBox{pid=7}
+
+1 2 right
+2 3 right
+3 4 right
+5 6 right
+6 7 right
+7 8 right
+1 5 top
+2 6 top
+3 7 top
+4 8 top
+
