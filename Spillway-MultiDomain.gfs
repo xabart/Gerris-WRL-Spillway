@@ -69,20 +69,20 @@
 ##################################################
 #  domains
 #
-#       5 | 6 | 7 | 8 |
-#      ----------------
-#       1 | 2 | 3 | 4 |
+#       6 | 7 | 8 | 9 | 10| 
+#      --------------------
+#       1 | 2 | 3 | 4 | 5 |
 #
 ##################################################
 ##################################################
 
-8 10 GfsSimulation GfsBox GfsGEdge {
+10 13 GfsSimulation GfsBox GfsGEdge {
 ##############################################################
   # shift origin of the domain
    x = 0.5 y = 0.5 } {
 ###############################################################
   Global {
-    double Qw = 0.1 ;
+    double Qw = 0.161 ;
     double Width = 1 ;
     double g = 9.81;
     double Time = 1;
@@ -91,11 +91,12 @@
     double mu_w = 1.002E-3 ;
     double mu_a = 1.79E-5  ;
     double sigma_0 = 7.286E-2 ;
-    double Hspillway = 1. ;
+    double Hspillway = 1.001 ;
     double ThetaSpillwayDegree = 60 ;
     double XStartSpillway = 0. ;
     double HstepSpillway= 0.1;
-    double LstepSpillway=0.2 ;  
+    double LstepSpillway=0.201 ;
+      
     #define Qw2        (Qw*Qw)
     #define Width2     (Width*Width)
     #define Dc         (cbrt((Qw2/(g*Width2))))
@@ -106,6 +107,8 @@
     #define ratio_mu   (mu_a/mu_w)
     #define ThetaSpillway   (ThetaSpillwayDegree*M_PI/180.)
     #define LengthSpillway  (Hspillway/tan(ThetaSpillway))
+
+    #define RefineInit  (6)
 
 //###############################################################
 //##   2 fluid phases
@@ -135,7 +138,7 @@
           return ysolid;
         }
         else {
-          double ysolid= y -height+  Hstep*floor((x-Xstart)/Hstep) ;
+          double ysolid= y -height+  Hstep*floor((x-Xstart)/Lstep) ;
           return ysolid;
         }
      }
@@ -174,10 +177,10 @@
 # }
 ##########################################
   # Grid Resolution
-  Refine 7
+  Refine RefineInit
 
   # Time
-  Time { end = 0. }
+  Time { end = 0.05 }
 
   # Tolerance for poisson
   ProjectionParams { tolerance = 1.e-6 nitermax = 20000}
@@ -195,10 +198,10 @@
   VariableFiltered T1 T 1
 
   # Curvature of the interface
-  #VariableCurvature K T
+  VariableCurvature K T
 
   # Coefficient for surface tension = 1/We^2
-   SourceTension T {1./(We*We)} K
+   SourceTension T (1./(We_w*We_w)) K
 
   # Init of the velocity field
    Init { } {
@@ -216,7 +219,7 @@
   PhysicalParams { alpha = 1./RHO(T1) }
 
   # Viscosity
-  SourceViscosity (1./Re)*MU(T1)
+  SourceViscosity (1./Re_w)*MU(T1)
 
   # Gravity
   Source {} V (-g)
@@ -227,7 +230,7 @@
    AdaptGradient  { istep = 1 } { maxlevel = 10 cmax = 1e-2 } T
   # AdaptGradient { istep = 1 } { cmax = 0.0 maxlevel = LEVEL1 } (U*T)
   
-  RefineSolid 7
+  RefineSolid RefineInit
   #smooth spillway
   #Solid ((x,Spillway(x,y, XStartSpillway,Hspillway,ThetaSpillway)))
   #step spillway
@@ -250,44 +253,73 @@
   GfsOutputSimulation { istep = 1 } Spillway-AMR-%ld.gfs
 
 #   GfsOutputSimulation { step = 1 } stdout
-#  GfsOutputTime            { istep = 1 } stdout
-#  GfsOutputProjectionStats { istep = 1 } stdout
-#  GfsOutputPPM             { step = 0.05 } test.ppm {
-#    v = T1 
-#    min = 0
-#    max =  1.
-#  }
+  GfsOutputTime 	   { istep = 1 } stdout
+  GfsOutputProjectionStats { istep = 1 } stdout
+  GfsOutputPPM  	   { step = 0.05 } test.ppm {
+    v = T1 
+    min = 0
+    max =  1.
+  }
 }
-GfsBox{pid=1
+GfsBox{
+  left = Boundary {
+  BcDirichlet U (SpillwayInflowU(y, Hspillway,Qw,Dc))
+  BcDirichlet T (SpillwayInflowT(y, Hspillway,Qw,Dc))
+  }
+  bottom = Boundary {
+  BcDirichlet U 0.
+  BcDirichlet V 0.
+  }
+}
+GfsBox{
+  bottom = Boundary {
+  BcDirichlet U 0.
+  BcDirichlet V 0.
+  }
+}
+GfsBox{
+  bottom = Boundary {
+  BcDirichlet U 0.
+  BcDirichlet V 0.
+  }
+}
+GfsBox{
+  bottom = Boundary {
+  BcDirichlet U 0.
+  BcDirichlet V 0.
+  }
+}
+GfsBox{
+  right = BoundaryOutflow
+  bottom = Boundary {
+  BcDirichlet U 0.
+  BcDirichlet V 0.
+  }
+}
+GfsBox{
   left = Boundary {
   BcDirichlet U (SpillwayInflowU(y, Hspillway,Qw,Dc))
   BcDirichlet T (SpillwayInflowT(y, Hspillway,Qw,Dc))
   }
 }
-GfsBox{pid=5
-  left = Boundary {
-  BcDirichlet U (SpillwayInflowU(y, Hspillway,Qw,Dc))
-  BcDirichlet T (SpillwayInflowT(y, Hspillway,Qw,Dc))
-}
-GfsBox{pid=4
+GfsBox{}
+GfsBox{}
+GfsBox{}
+GfsBox{
   right = BoundaryOutflow
 }
-GfsBox{pid=8
-  right = BoundaryOutflow
-}
-GfsBox{pid=2}
-GfsBox{pid=3}
-GfsBox{pid=6}
-GfsBox{pid=7}
 
 1 2 right
 2 3 right
 3 4 right
-5 6 right
+4 5 right
 6 7 right
 7 8 right
-1 5 top
-2 6 top
-3 7 top
-4 8 top
+8 9 right
+9 10 right
+1 6 top
+2 7 top
+3 8 top
+4 9 top
+5 10 top
 
