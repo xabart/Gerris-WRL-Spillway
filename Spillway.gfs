@@ -254,7 +254,8 @@
   # Init of free surface
 #  InitFraction {}  T ( (y-Hspillway) )
 #  InitFraction {}  T ( 1.)
-  InitFraction {}  T ( (SpillwayInitT(x, y,Hspillway-RadiusInletSpillway,Xinlet)))
+#  InitFraction {}  T ( (SpillwayInitT(x, y,Hspillway-RadiusInletSpillway,Xinlet)))
+  InitFraction {}  T ( cube(Xinlet/2,(Hspillway-RadiusInletSpillway)/2,0,(Hspillway-RadiusInletSpillway) ))
 
 
   # Density
