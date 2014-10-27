@@ -139,8 +139,8 @@
           return ysolid;
         }
         else if ((x<=Xstart)&(x>=Xinlet)&(x<(Xinlet+Radius))){
-	  double cylinder = sqrt(pow(Radius,2)-pow((x-Xinlet-Radius),2));
-	  double ysolid= cylinder -height ;
+	  double cylinder = sqrt(pow(Radius,2)-pow((x-Xinlet-Radius),2))-Radius;
+	  double ysolid= y - cylinder -height ;
           return ysolid;
         }
         else if ((x<=Xstart)&(x>=(Xinlet+Radius))){
@@ -188,6 +188,21 @@
           return 1.;
         }
      }
+//###############################################################
+    // Spillway init
+//###############################################################
+     double SpillwayInitT(double x, double y,double Hinit,double Xinlet){
+        if ((x<Xinlet)&(y<Hinit)){
+          return 0.;
+        }
+        else{
+          return 1.;
+        }
+     }
+/
+
+
+
      
 //###############################################################
   }
@@ -238,7 +253,8 @@
 
   # Init of free surface
 #  InitFraction {}  T ( (y-Hspillway) )
-  InitFraction {}  T ( 1.)
+#  InitFraction {}  T ( 1.)
+  InitFraction {}  T ( (SpillwayInitT(x, y,Hspillway-RadiusInletSpillway,Xinlet)))
 
 
   # Density
