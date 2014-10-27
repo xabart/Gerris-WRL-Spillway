@@ -110,7 +110,7 @@
     #define ThetaSpillway   (ThetaSpillwayDegree*M_PI/180.)
     #define LengthSpillway  (Hspillway/tan(ThetaSpillway))
 
-    #define RefineInit  (8)
+    #define RefineInit  (5)
 
 //###############################################################
 //##   2 fluid phases
@@ -150,8 +150,8 @@
           return ysolid;
         }
         else if ((x<=Xstart)&(x>=Xinlet)&(x<(Xinlet+Radius))){
-	  double cylinder = sqrt(pow(Radius,2)-pow((x-Xinlet-Radius),2));
-	  double ysolid= cylinder -height ;
+	  double cylinder = sqrt(pow(Radius,2)-pow((x-Xinlet-Radius),2))-Radius;
+	  double ysolid= y - cylinder -height ;
           return ysolid;
         }
         else if ((x<=Xstart)&(x>=(Xinlet+Radius))){
@@ -304,8 +304,10 @@ GfsBox{
   left = Boundary {
   #BcDirichlet U (SpillwayInflowInletU(y, Hspillway,Qw,Dc))
   #BcDirichlet T (SpillwayInflowT(y, Hspillway,Qw,Dc))
-  BcDirichlet U (SpillwayInflowInletU(y, Hspillway-RadiusInletSpillway,Qw,Dc))
-  BcDirichlet T (SpillwayInflowInletT(y, Hspillway-RadiusInletSpillway,Qw,Dc))
+ # BcDirichlet U (SpillwayInflowInletU(y, Hspillway-RadiusInletSpillway,Qw,Dc))
+ # BcDirichlet T (SpillwayInflowInletT(y, Hspillway-RadiusInletSpillway,Qw,Dc))
+  BcDirichlet U (SpillwayInflowInletU(y, 0.1,Qw,Dc))
+  BcDirichlet T (SpillwayInflowInletT(y, 0.1,Qw,Dc))
   }
   bottom = Boundary {
   BcDirichlet U 0.

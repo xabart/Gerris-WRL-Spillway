@@ -207,7 +207,7 @@
   Refine 6
 
   # Time
-  Time { end = 0.1 }
+  Time { end = 0. }
 
   # Tolerance for poisson
   ProjectionParams { tolerance = 1.e-6 nitermax = 10000}
