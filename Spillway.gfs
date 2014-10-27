@@ -88,6 +88,8 @@
     double XStartSpillway = 0. ;
     double HstepSpillway= 0.1;
     double LstepSpillway=0.2 ;  
+    double RadiusInletSpillway=0.1 ;
+    double Xinlet=0.3;
     #define Qw2        (Qw*Qw)
     #define Width2     (Width*Width)
     #define Dc         (cbrt((Qw2/(g*Width2))))
@@ -179,7 +181,7 @@
         }
      }
      double SpillwayInflowInletT(double y, double Hspillway,double Qw,double DDc){
-        if (y<Hspillway)){
+        if (y<Hspillway){
           return 0.;
         }
         else{
@@ -259,7 +261,8 @@
   #smooth spillway
   #Solid ((x,Spillway(x,y, XStartSpillway,Hspillway,ThetaSpillway)))
   #step spillway
-  Solid ((x,SpillwayStep( x,y, XStartSpillway,Hspillway,LstepSpillway, HstepSpillway)))
+  #Solid ((x,SpillwayStep( x,y, XStartSpillway,Hspillway,LstepSpillway, HstepSpillway)))
+  Solid ((x,SpillwayStepInlet( x,y, XStartSpillway,Hspillway,LstepSpillway, HstepSpillway,Xinlet, RadiusInletSpillway)))
 
   #RemoveDroplets { istep = 1 } T -2
 
@@ -290,8 +293,10 @@ GfsBox{
   bottom = Boundary {
   }
   left = Boundary {
-  BcDirichlet U (SpillwayInflowU(y, Hspillway,Qw,Dc))
-  BcDirichlet T (SpillwayInflowT(y, Hspillway,Qw,Dc))
+  #BcDirichlet U (SpillwayInflowU(y, Hspillway,Qw,Dc))
+  #BcDirichlet T (SpillwayInflowT(y, Hspillway,Qw,Dc))
+  BcDirichlet U (SpillwayInflowInletU(y, Hspillway-RadiusInletSpillway,Qw,Dc))
+  BcDirichlet T (SpillwayInflowInletT(y, Hspillway-RadiusInletSpillway,Qw,Dc))
   }
   right = BoundaryOutflow
 }

@@ -97,7 +97,7 @@
     double HstepSpillway= 0.1;
     double LstepSpillway=0.201 ;
     double RadiusInletSpillway=0.1 ;
-    double Xinlet=0.3
+    double Xinlet=0.3;
       
     #define Qw2        (Qw*Qw)
     #define Width2     (Width*Width)
@@ -174,7 +174,7 @@
           return 0.;
         }
      }
-     double SpillwayInflowT(double y, double Hspillway,double Qw,double DDc){
+     double SpillwayInflowT(double y, double Hspillway, double Qw, double DDc){
         if ((y>Hspillway)&(y<DDc+Hspillway)){
           return 0.;
         }
@@ -183,7 +183,7 @@
         }
      }
      
-     double SpillwayInflowInletU(double y, double Hspillway,double Qw,double DDc){
+     double SpillwayInflowInletU(double y, double Hspillway, double Qw, double DDc){
         if (y<Hspillway){
           return (Qw/Hspillway);
         }
@@ -191,8 +191,8 @@
           return 0.;
         }
      }
-     double SpillwayInflowInletT(double y, double Hspillway,double Qw,double DDc){
-        if (y<Hspillway)){
+     double SpillwayInflowInletT(double y, double Hspillway, double Qw, double DDc){
+        if (y<Hspillway){
           return 0.;
         }
         else{
@@ -273,7 +273,7 @@
   #Solid ((x,Spillway(x,y, XStartSpillway,Hspillway,ThetaSpillway)))
   #step spillway
   #Solid ((x,SpillwayStep( x,y, XStartSpillway,Hspillway,LstepSpillway, HstepSpillway)))
-  Solid ((x,SpillwayStep( x,y, XStartSpillway,Hspillway,LstepSpillway, HstepSpillway,Xinlet, RadiusInletSpillway)))
+  Solid ((x,SpillwayStepInlet( x,y, XStartSpillway,Hspillway,LstepSpillway, HstepSpillway,Xinlet, RadiusInletSpillway)))
 
   #RemoveDroplets { istep = 1 } T -2
 
