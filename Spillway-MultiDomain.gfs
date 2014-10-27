@@ -93,9 +93,11 @@
     double sigma_0 = 7.286E-2 ;
     double Hspillway = 1.001 ;
     double ThetaSpillwayDegree = 60 ;
-    double XStartSpillway = 0. ;
+    double XStartSpillway = 0.6 ;
     double HstepSpillway= 0.1;
     double LstepSpillway=0.201 ;
+    double RadiusInletSpillway=0.1 ;
+    double Xinlet=0.3
       
     #define Qw2        (Qw*Qw)
     #define Width2     (Width*Width)
@@ -108,7 +110,7 @@
     #define ThetaSpillway   (ThetaSpillwayDegree*M_PI/180.)
     #define LengthSpillway  (Hspillway/tan(ThetaSpillway))
 
-    #define RefineInit  (6)
+    #define RefineInit  (8)
 
 //###############################################################
 //##   2 fluid phases
@@ -142,6 +144,25 @@
           return ysolid;
         }
      }
+     double SpillwayStepInlet(double x,double y, double Xstart,double height,double Lstep, double Hstep, double Xinlet, double Radius){
+        if (x<Xinlet){
+          double ysolid= y ;
+          return ysolid;
+        }
+        else if ((x<=Xstart)&(x>=Xinlet)&(x<(Xinlet+Radius))){
+	  double cylinder = sqrt(pow(Radius,2)-pow((x-Xinlet-Radius),2));
+	  double ysolid= cylinder -height ;
+          return ysolid;
+        }
+        else if ((x<=Xstart)&(x>=(Xinlet+Radius))){
+          double ysolid= y -height ;
+          return ysolid;
+        }
+        else {
+          double ysolid= y -height+  Hstep*floor((x-Xstart)/Hstep) ;
+          return ysolid;
+        }
+     }
 //###############################################################
     // Spillway inflow
 //###############################################################
@@ -155,6 +176,23 @@
      }
      double SpillwayInflowT(double y, double Hspillway,double Qw,double DDc){
         if ((y>Hspillway)&(y<DDc+Hspillway)){
+          return 0.;
+        }
+        else{
+          return 1.;
+        }
+     }
+     
+     double SpillwayInflowInletU(double y, double Hspillway,double Qw,double DDc){
+        if (y<Hspillway){
+          return (Qw/Hspillway);
+        }
+        else{
+          return 0.;
+        }
+     }
+     double SpillwayInflowInletT(double y, double Hspillway,double Qw,double DDc){
+        if (y<Hspillway)){
           return 0.;
         }
         else{
@@ -226,15 +264,16 @@
   Source {} U (0.)
 
   # AMR
-   AdaptVorticity { istep = 1 } { maxlevel = 10 cmax = 1e-2 }
-   AdaptGradient  { istep = 1 } { maxlevel = 10 cmax = 1e-2 } T
-  # AdaptGradient { istep = 1 } { cmax = 0.0 maxlevel = LEVEL1 } (U*T)
+  # AdaptVorticity { istep = 3 } { maxlevel = 10 cmax = 1e-2 }
+  # AdaptGradient  { istep = 3 } { maxlevel = 10 cmax = 1e-2 } T
+  # AdaptGradient { istep = 3 } { cmax = 0.0 maxlevel = LEVEL1 } (U*T)
   
   RefineSolid RefineInit
   #smooth spillway
   #Solid ((x,Spillway(x,y, XStartSpillway,Hspillway,ThetaSpillway)))
   #step spillway
-  Solid ((x,SpillwayStep( x,y, XStartSpillway,Hspillway,LstepSpillway, HstepSpillway)))
+  #Solid ((x,SpillwayStep( x,y, XStartSpillway,Hspillway,LstepSpillway, HstepSpillway)))
+  Solid ((x,SpillwayStep( x,y, XStartSpillway,Hspillway,LstepSpillway, HstepSpillway,Xinlet, RadiusInletSpillway)))
 
   #RemoveDroplets { istep = 1 } T -2
 
@@ -263,8 +302,10 @@
 }
 GfsBox{
   left = Boundary {
-  BcDirichlet U (SpillwayInflowU(y, Hspillway,Qw,Dc))
-  BcDirichlet T (SpillwayInflowT(y, Hspillway,Qw,Dc))
+  #BcDirichlet U (SpillwayInflowInletU(y, Hspillway,Qw,Dc))
+  #BcDirichlet T (SpillwayInflowT(y, Hspillway,Qw,Dc))
+  BcDirichlet U (SpillwayInflowInletU(y, Hspillway-RadiusInletSpillway,Qw,Dc))
+  BcDirichlet T (SpillwayInflowInletT(y, Hspillway-RadiusInletSpillway,Qw,Dc))
   }
   bottom = Boundary {
   BcDirichlet U 0.
@@ -298,8 +339,10 @@ GfsBox{
 }
 GfsBox{
   left = Boundary {
-  BcDirichlet U (SpillwayInflowU(y, Hspillway,Qw,Dc))
-  BcDirichlet T (SpillwayInflowT(y, Hspillway,Qw,Dc))
+  #BcDirichlet U (SpillwayInflowU(y, Hspillway,Qw,Dc))
+  #BcDirichlet T (SpillwayInflowT(y, Hspillway,Qw,Dc))
+  BcDirichlet U (SpillwayInflowInletU(y, Hspillway-RadiusInletSpillway,Qw,Dc))
+  BcDirichlet T (SpillwayInflowInletT(y, Hspillway-RadiusInletSpillway,Qw,Dc))
   }
 }
 GfsBox{}

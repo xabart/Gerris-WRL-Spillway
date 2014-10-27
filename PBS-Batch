@@ -11,4 +11,4 @@
 
 cd $PBS_O_WORKDIR
  
-mpirun -np 10 gerris2D Flume2D-Long-N12.gfs
+mpirun -np 10 gerris2D Spillway-MultiDomain.gfs

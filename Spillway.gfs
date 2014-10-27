@@ -131,6 +131,25 @@
           return ysolid;
         }
      }
+     double SpillwayStepInlet(double x,double y, double Xstart,double height,double Lstep, double Hstep, double Xinlet, double Radius){
+        if (x<Xinlet){
+          double ysolid= y ;
+          return ysolid;
+        }
+        else if ((x<=Xstart)&(x>=Xinlet)&(x<(Xinlet+Radius))){
+	  double cylinder = sqrt(pow(Radius,2)-pow((x-Xinlet-Radius),2));
+	  double ysolid= cylinder -height ;
+          return ysolid;
+        }
+        else if ((x<=Xstart)&(x>=(Xinlet+Radius))){
+          double ysolid= y -height ;
+          return ysolid;
+        }
+        else {
+          double ysolid= y -height+  Hstep*floor((x-Xstart)/Hstep) ;
+          return ysolid;
+        }
+     }
 //###############################################################
     // Spillway inflow
 //###############################################################
@@ -144,6 +163,23 @@
      }
      double SpillwayInflowT(double y, double Hspillway,double Qw,double DDc){
         if ((y>Hspillway)&(y<DDc+Hspillway)){
+          return 0.;
+        }
+        else{
+          return 1.;
+        }
+     }
+     
+     double SpillwayInflowInletU(double y, double Hspillway,double Qw,double DDc){
+        if (y<Hspillway){
+          return (Qw/Hspillway);
+        }
+        else{
+          return 0.;
+        }
+     }
+     double SpillwayInflowInletT(double y, double Hspillway,double Qw,double DDc){
+        if (y<Hspillway)){
           return 0.;
         }
         else{
